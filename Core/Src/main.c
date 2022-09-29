@@ -26,6 +26,8 @@
 #include <stdbool.h>
 #include "GMG12864_lib.h"
 #include "INA219_lib.h"
+#include "fatfs_sd.h"
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -63,12 +65,16 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 FATFS fs;
 FIL fil;
+FRESULT fresult;
+char buffer_sd_card[1024];
+uint16_t br, bw;
 
 INA219_t ina219;
 extern char tx_buffer[128];
 uint16_t v_bus, v_shunt, current, power;
 unsigned long t_ina219 = 0;
 unsigned long t_gmg12864 = 0;
+unsigned long t_sd_card = 0;
 bool state_high_charge = 0;
 bool state_low_charge = 0;
 bool state_discharge = 0;
@@ -99,6 +105,7 @@ void GMG12864_third_line_level_1(uint8_t x, uint8_t y);
 void GMG12864_fourth_line_level_1(uint8_t x, uint8_t y);
 void GMG12864_fifth_line_level_1(uint8_t x, uint8_t y);
 void GMG12864_sixth_line_level_1(uint8_t x, uint8_t y);
+void sd_card_write(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -145,12 +152,9 @@ int main(void)
   INA219_Init(&ina219, &hi2c1, INA219_ADDRESS);
   t_ina219 = HAL_GetTick();
   t_gmg12864 = HAL_GetTick();
+  t_sd_card = HAL_GetTick();
   HAL_Delay(500);
-  f_mount(&fs, "", 0);
-  f_open(&fil, "data.txt", FA_OPEN_ALWAYS | FA_WRITE | FA_READ);
-  f_lseek(&fil, fil.fsize);
-  f_puts("Hello from Vladik\n", &fil);
-  f_close(&fil);
+  fresult = f_mount(&fs, "", 0);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -163,6 +167,7 @@ int main(void)
 	  manual_mode_func();
 	  mode_change_func();
 	  print_gmg12864_level_1();
+	  sd_card_write();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -624,6 +629,14 @@ void GMG12864_sixth_line_level_1(uint8_t x, uint8_t y){
 	GMG12864_Update();
 }
 
+void sd_card_write(){
+	if(HAL_GetTick() - t_sd_card > 1000){
+		t_sd_card = HAL_GetTick();
+		fresult = f_open(&fil, "parameters.txt", FA_OPEN_ALWAYS | FA_READ | FA_WRITE);
+		fresult = f_puts("DATA!!!/n", &fil);
+		fresult = f_close(&fil);
+	}
+}
 /* USER CODE END 4 */
 
 /**
