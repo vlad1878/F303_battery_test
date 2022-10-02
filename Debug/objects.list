@@ -2,6 +2,7 @@
 "./Core/Src/INA219_lib.o"
 "./Core/Src/fatfs_sd.o"
 "./Core/Src/main.o"
+"./Core/Src/max_ds3231_lib.o"
 "./Core/Src/stm32f3xx_hal_msp.o"
 "./Core/Src/stm32f3xx_it.o"
 "./Core/Src/syscalls.o"

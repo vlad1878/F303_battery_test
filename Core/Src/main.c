@@ -28,6 +28,7 @@
 #include "INA219_lib.h"
 #include "fatfs_sd.h"
 #include "string.h"
+#include "max_ds3231_lib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,8 +44,8 @@
 #define high_charge_off() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BR_0))
 #define low_charge_off() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BR_1))
 #define discharge_off() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BR_2))
-#define read_state_of_low_charge() (READ_BIT(GPIOC->IDR, GPIO_IDR_0))
-#define read_state_of_high_charge() (READ_BIT(GPIOC->IDR, GPIO_IDR_1))
+#define read_state_of_high_charge() (READ_BIT(GPIOC->IDR, GPIO_IDR_0))
+#define read_state_of_low_charge() (READ_BIT(GPIOC->IDR, GPIO_IDR_1))
 #define read_state_of_discharge() (READ_BIT(GPIOC->IDR,GPIO_IDR_2))
 /* USER CODE END PD */
 
@@ -68,6 +69,8 @@ FIL fil;
 FRESULT fresult;
 char buffer_sd_card[1024];
 uint16_t br, bw;
+uint16_t counter_sd_card = 0;
+volatile bool sd_card_init_flag = 0;
 
 INA219_t ina219;
 extern char tx_buffer[128];
@@ -82,6 +85,17 @@ bool discharge_enable = 0;
 volatile bool control_mode = 0;
 uint8_t manual_mode = 0;
 volatile bool flag_change_mode = 0;
+
+extern uint8_t Seconds;
+extern uint8_t Minutes;
+extern uint8_t Hours;
+extern uint8_t Day;
+extern uint8_t Date;
+extern uint8_t Month;
+extern uint8_t Cuntury;
+extern uint16_t Year;
+extern float max_ds3231_temp;
+unsigned long t_ds3231 = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -106,6 +120,8 @@ void GMG12864_fourth_line_level_1(uint8_t x, uint8_t y);
 void GMG12864_fifth_line_level_1(uint8_t x, uint8_t y);
 void GMG12864_sixth_line_level_1(uint8_t x, uint8_t y);
 void sd_card_write(void);
+void manual_init_sd_card(void);
+void ds3231_get_time_and_temp(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -153,8 +169,15 @@ int main(void)
   t_ina219 = HAL_GetTick();
   t_gmg12864 = HAL_GetTick();
   t_sd_card = HAL_GetTick();
+  t_ds3231 = HAL_GetTick();
   HAL_Delay(500);
-  fresult = f_mount(&fs, "", 0);
+  if((fresult = f_mount(&fs, "", 0)) != FR_OK){
+	  sprintf(buffer_sd_card, "Card is not detected!!");
+	  SET_BIT(GPIOA->BSRR, GPIO_BSRR_BS_5);
+	  GMG12864_third_line_level_1(0, 0);
+	  HAL_Delay(2000);
+  }
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -163,11 +186,13 @@ int main(void)
   {
 	  read_state_of_relays();
 	  get_param_from_ina219();
+	  ds3231_get_time_and_temp();
 	  automatik_mode();
 	  manual_mode_func();
 	  mode_change_func();
 	  print_gmg12864_level_1();
 	  sd_card_write();
+	  manual_init_sd_card();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -525,16 +550,16 @@ void manual_mode_func(){
 
 void automatik_mode(){
 	if(!control_mode){
-		if(v_bus < 5100 && (discharge_enable == 0)){
+		if(v_bus < 800 && (discharge_enable == 0)){
 			low_charge_off();
 			discharge_off();
 			high_charge_on();
 		}
-		else if(v_bus > 7100 && (discharge_enable == 0)){
+		else if(v_bus > 3100 && (discharge_enable == 0)){
 			high_charge_off();
 			discharge_off();
 			low_charge_on();
-			if(v_bus >= 7250){
+			if(v_bus >= 4250){
 				discharge_enable = 1;
 			}
 		}
@@ -561,8 +586,9 @@ void get_param_from_ina219(){
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == (0x2000)){
-		control_mode = !control_mode;
-		flag_change_mode = 1;
+		//control_mode = !control_mode;
+		//flag_change_mode = 1;
+		sd_card_init_flag = 1;
 	}
 }
 
@@ -606,8 +632,8 @@ void GMG12864_second_line_level_1(uint8_t x, uint8_t y){
 }
 
 void GMG12864_third_line_level_1(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "Power is %d           ", power);
-	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
+	//sprintf(tx_buffer, "Power is %d           ", power);
+	GMG12864_Decode_UTF8(x, y, 1, inversion_off, buffer_sd_card);
 	GMG12864_Update();
 }
 
@@ -631,12 +657,51 @@ void GMG12864_sixth_line_level_1(uint8_t x, uint8_t y){
 
 void sd_card_write(){
 	if(HAL_GetTick() - t_sd_card > 1000){
-		t_sd_card = HAL_GetTick();
-		fresult = f_open(&fil, "parameters.txt", FA_OPEN_ALWAYS | FA_READ | FA_WRITE);
-		fresult = f_puts("DATA!!!/n", &fil);
-		fresult = f_close(&fil);
+		if((fresult = f_open(&fil, "parameters.txt", FA_OPEN_ALWAYS | FA_WRITE)) == FR_OK){
+			t_sd_card = HAL_GetTick();
+			sprintf(buffer_sd_card, "counter sd %d", counter_sd_card);
+			fresult = f_lseek(&fil, fil.fsize);
+			fresult = f_puts("DATA!!!/n", &fil);
+			fresult = f_close(&fil);
+			counter_sd_card += 1;
+			SET_BIT(GPIOA->BSRR, GPIO_BSRR_BR_5);
+		}
+		else if((fresult = f_open(&fil, "parameters.txt", FA_OPEN_ALWAYS | FA_WRITE)) == FR_DISK_ERR){
+			t_sd_card = HAL_GetTick();
+			sprintf(buffer_sd_card, "Card is not detected!!");
+			SET_BIT(GPIOA->BSRR, GPIO_BSRR_BS_5);
+		}
+		else{
+			t_sd_card = HAL_GetTick();
+			sprintf(buffer_sd_card, "Problem with sd card!!");
+			SET_BIT(GPIOA->BSRR, GPIO_BSRR_BS_5);
+		}
 	}
 }
+
+void manual_init_sd_card(){
+	if(sd_card_init_flag){
+		sd_card_init_flag = 0;
+		memset(&fs, 0, sizeof(fs));
+		fresult = f_mount(&fs, "", 0);
+		HAL_Delay(50);
+		fresult = f_mount(&fs, "", 0);
+		HAL_Delay(50);
+		fresult = f_mount(&fs, "", 0);
+		HAL_Delay(50);
+		fresult = f_mount(&fs, "", 0);
+		HAL_Delay(50);
+	}
+}
+
+void ds3231_get_time_and_temp(){
+	if(HAL_GetTick() - t_ds3231 > 1000){
+		t_ds3231 = HAL_GetTick();
+		max_ds3231_get_time();
+		max_ds3231_get_time();
+	}
+}
+
 /* USER CODE END 4 */
 
 /**

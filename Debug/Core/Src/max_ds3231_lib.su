@@ -1,0 +1,9 @@
+../Core/Src/max_ds3231_lib.c:24:6:max_ds3231_get_time	24	static
+../Core/Src/max_ds3231_lib.c:56:6:max_ds3231_get_temperature	32	static
+../Core/Src/max_ds3231_lib.c:93:6:max_ds3231_set_seconds	32	static
+../Core/Src/max_ds3231_lib.c:116:6:max_ds3231_set_minutes	32	static
+../Core/Src/max_ds3231_lib.c:139:6:max_ds3231_set_hours	32	static
+../Core/Src/max_ds3231_lib.c:161:6:max_ds3231_set_day	32	static
+../Core/Src/max_ds3231_lib.c:181:6:max_ds3231_set_date	32	static
+../Core/Src/max_ds3231_lib.c:203:6:max_ds3231_set_month_cuntury	32	static
+../Core/Src/max_ds3231_lib.c:232:6:max_ds3231_set_year	32	static
