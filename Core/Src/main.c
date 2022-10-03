@@ -170,6 +170,10 @@ int main(void)
   t_gmg12864 = HAL_GetTick();
   t_sd_card = HAL_GetTick();
   t_ds3231 = HAL_GetTick();
+  max_ds3231_set_hours(19);
+  max_ds3231_set_minutes(58);
+  max_ds3231_set_seconds(0);
+  max_ds3231_set_day(1);
   HAL_Delay(500);
   if((fresult = f_mount(&fs, "", 0)) != FR_OK){
 	  sprintf(buffer_sd_card, "Card is not detected!!");
@@ -586,8 +590,8 @@ void get_param_from_ina219(){
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == (0x2000)){
-		//control_mode = !control_mode;
-		//flag_change_mode = 1;
+		control_mode = !control_mode;
+		flag_change_mode = 1;
 		sd_card_init_flag = 1;
 	}
 }
@@ -626,13 +630,14 @@ void GMG12864_first_line_level_1(uint8_t x, uint8_t y){
 }
 
 void GMG12864_second_line_level_1(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "Current is %d         ", current);
+	sprintf(tx_buffer, "Time is %d :%d :%d    ", Hours, Minutes, Seconds);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_third_line_level_1(uint8_t x, uint8_t y){
 	//sprintf(tx_buffer, "Power is %d           ", power);
+	sprintf(buffer_sd_card, "SD card counter %d    ", counter_sd_card);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, buffer_sd_card);
 	GMG12864_Update();
 }
@@ -659,7 +664,7 @@ void sd_card_write(){
 	if(HAL_GetTick() - t_sd_card > 1000){
 		if((fresult = f_open(&fil, "parameters.txt", FA_OPEN_ALWAYS | FA_WRITE)) == FR_OK){
 			t_sd_card = HAL_GetTick();
-			sprintf(buffer_sd_card, "counter sd %d", counter_sd_card);
+			sprintf(buffer_sd_card, "Time is %d :%d :%d, voltage is %d    ", Hours, Minutes, Seconds, v_bus);
 			fresult = f_lseek(&fil, fil.fsize);
 			fresult = f_puts("DATA!!!/n", &fil);
 			fresult = f_close(&fil);
@@ -698,7 +703,7 @@ void ds3231_get_time_and_temp(){
 	if(HAL_GetTick() - t_ds3231 > 1000){
 		t_ds3231 = HAL_GetTick();
 		max_ds3231_get_time();
-		max_ds3231_get_time();
+		max_ds3231_get_temperature();
 	}
 }
 
