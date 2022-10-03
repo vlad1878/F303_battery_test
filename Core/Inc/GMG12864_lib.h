@@ -1,21 +1,3 @@
-/*
- * GMG12864_lib.h
- *
- *  Версия 1.1.(Общая графическая библиотека Волкова Олега)
- *  Переделан вывод символов на дисплей. В версии 1.1. имеется возможность вывода текста в любой точке по x и y.
- *
- *  Created on: Aug 16, 2021
- *      Author: Oleg Volkov
- *
- *  YouTube: https://www.youtube.com/channel/UCzZKTNVpcMSALU57G1THoVw
- *  GitHub: https://github.com/Solderingironspb/Lessons-Stm32/blob/master/README.md
- *  Группа ВК: https://vk.com/solderingiron.stm32
- *
- *  Кодировка UTF-8 Basic Latin: https://www.utf8-chartable.de/unicode-utf8-table.pl
- *  Кодировка UTF-8 Cyrillic: https://www.utf8-chartable.de/unicode-utf8-table.pl?start=1024&names=-&unicodeinhtml=hex
- *  Программа для конвертации изображения.bmp в bitmap: http://en.radzio.dxp.pl/bitmap_converter/
- */
-
 #ifndef INC_GMG12864_LIB_H_
 #define INC_GMG12864_LIB_H_
 

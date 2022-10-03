@@ -1,10 +1,3 @@
-/*
- * INA219.h
- *
- *  Created on: Dec 30, 2020
- *      Author: Piotr Smolen <komuch@gmail.com>
- */
-
 #ifndef INC_INA219_H_
 #define INC_INA219_H_
 
