@@ -23,7 +23,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 /* USER CODE END Includes */
-
+#include "SMA_filter_lib.h"
+#include <stdbool.h>
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
 
@@ -41,7 +42,11 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+uint16_t SMA_Filter_Buffer[SMA_FILTER_ORDER] = {0, };
+uint16_t ADC_SMA_Data = 0;
+uint16_t ADC_RAW_Data = 0;
+uint16_t Counter_DMA_IT = 0;
+bool adc_flag = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,9 +70,11 @@ void SDTimer_Handler(void)
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern DMA_HandleTypeDef hdma_adc1;
 extern I2C_HandleTypeDef hi2c2;
+extern TIM_HandleTypeDef htim6;
 /* USER CODE BEGIN EV */
-
+extern ADC_HandleTypeDef hadc1;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -214,6 +221,25 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles DMA1 channel1 global interrupt.
+  */
+void DMA1_Channel1_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Channel1_IRQn 0 */
+
+  /* USER CODE END DMA1_Channel1_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_adc1);
+  /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
+  Counter_DMA_IT++;
+  if(Counter_DMA_IT == 1200){
+	  Counter_DMA_IT = 0;
+	  ADC_SMA_Data = SMA_FILTER_Get_Value(SMA_Filter_Buffer, &ADC_RAW_Data);
+	  adc_flag = 1;
+  }
+  /* USER CODE END DMA1_Channel1_IRQn 1 */
+}
+
+/**
   * @brief This function handles I2C2 event global interrupt / I2C2 wake-up interrupt through EXTI line 24.
   */
 void I2C2_EV_IRQHandler(void)
@@ -253,6 +279,20 @@ void EXTI15_10_IRQHandler(void)
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
 
   /* USER CODE END EXTI15_10_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM6 global interrupt and DAC1 underrun interrupt.
+  */
+void TIM6_DAC_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM6_DAC_IRQn 0 */
+
+  /* USER CODE END TIM6_DAC_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim6);
+  /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
+  HAL_ADC_Start_DMA(&hadc1, &ADC_RAW_Data, 1);
+  /* USER CODE END TIM6_DAC_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

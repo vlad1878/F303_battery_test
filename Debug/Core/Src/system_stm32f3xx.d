@@ -19,6 +19,8 @@ Core/Src/system_stm32f3xx.o: ../Core/Src/system_stm32f3xx.c \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_dma.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_dma_ex.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_cortex.h \
+ ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_adc.h \
+ ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_adc_ex.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_flash.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_flash_ex.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_i2c.h \
@@ -27,6 +29,8 @@ Core/Src/system_stm32f3xx.o: ../Core/Src/system_stm32f3xx.c \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_pwr_ex.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_spi.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_spi_ex.h \
+ ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_tim.h \
+ ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_tim_ex.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart_ex.h
 ../Drivers/CMSIS/Device/ST/STM32F3xx/Include/stm32f3xx.h:
@@ -49,6 +53,8 @@ Core/Src/system_stm32f3xx.o: ../Core/Src/system_stm32f3xx.c \
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_dma.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_dma_ex.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_cortex.h:
+../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_adc.h:
+../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_adc_ex.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_flash.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_flash_ex.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_i2c.h:
@@ -57,5 +63,7 @@ Core/Src/system_stm32f3xx.o: ../Core/Src/system_stm32f3xx.c \
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_pwr_ex.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_spi.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_spi_ex.h:
+../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_tim.h:
+../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_tim_ex.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart_ex.h:

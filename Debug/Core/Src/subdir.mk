@@ -7,6 +7,7 @@
 C_SRCS += \
 ../Core/Src/GMG12864_lib.c \
 ../Core/Src/INA219_lib.c \
+../Core/Src/SMA_filter_lib.c \
 ../Core/Src/fatfs_sd.c \
 ../Core/Src/main.c \
 ../Core/Src/max_ds3231_lib.c \
@@ -19,6 +20,7 @@ C_SRCS += \
 OBJS += \
 ./Core/Src/GMG12864_lib.o \
 ./Core/Src/INA219_lib.o \
+./Core/Src/SMA_filter_lib.o \
 ./Core/Src/fatfs_sd.o \
 ./Core/Src/main.o \
 ./Core/Src/max_ds3231_lib.o \
@@ -31,6 +33,7 @@ OBJS += \
 C_DEPS += \
 ./Core/Src/GMG12864_lib.d \
 ./Core/Src/INA219_lib.d \
+./Core/Src/SMA_filter_lib.d \
 ./Core/Src/fatfs_sd.d \
 ./Core/Src/main.d \
 ./Core/Src/max_ds3231_lib.d \
@@ -48,7 +51,7 @@ Core/Src/%.o Core/Src/%.su: ../Core/Src/%.c Core/Src/subdir.mk
 clean: clean-Core-2f-Src
 
 clean-Core-2f-Src:
-	-$(RM) ./Core/Src/GMG12864_lib.d ./Core/Src/GMG12864_lib.o ./Core/Src/GMG12864_lib.su ./Core/Src/INA219_lib.d ./Core/Src/INA219_lib.o ./Core/Src/INA219_lib.su ./Core/Src/fatfs_sd.d ./Core/Src/fatfs_sd.o ./Core/Src/fatfs_sd.su ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/max_ds3231_lib.d ./Core/Src/max_ds3231_lib.o ./Core/Src/max_ds3231_lib.su ./Core/Src/stm32f3xx_hal_msp.d ./Core/Src/stm32f3xx_hal_msp.o ./Core/Src/stm32f3xx_hal_msp.su ./Core/Src/stm32f3xx_it.d ./Core/Src/stm32f3xx_it.o ./Core/Src/stm32f3xx_it.su ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32f3xx.d ./Core/Src/system_stm32f3xx.o ./Core/Src/system_stm32f3xx.su
+	-$(RM) ./Core/Src/GMG12864_lib.d ./Core/Src/GMG12864_lib.o ./Core/Src/GMG12864_lib.su ./Core/Src/INA219_lib.d ./Core/Src/INA219_lib.o ./Core/Src/INA219_lib.su ./Core/Src/SMA_filter_lib.d ./Core/Src/SMA_filter_lib.o ./Core/Src/SMA_filter_lib.su ./Core/Src/fatfs_sd.d ./Core/Src/fatfs_sd.o ./Core/Src/fatfs_sd.su ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/max_ds3231_lib.d ./Core/Src/max_ds3231_lib.o ./Core/Src/max_ds3231_lib.su ./Core/Src/stm32f3xx_hal_msp.d ./Core/Src/stm32f3xx_hal_msp.o ./Core/Src/stm32f3xx_hal_msp.su ./Core/Src/stm32f3xx_it.d ./Core/Src/stm32f3xx_it.o ./Core/Src/stm32f3xx_it.su ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32f3xx.d ./Core/Src/system_stm32f3xx.o ./Core/Src/system_stm32f3xx.su
 
 .PHONY: clean-Core-2f-Src
 
