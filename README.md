@@ -1,0 +1,1 @@
+Project which logging parameters(voltage of battery, current flowing through the battery in charging and discharging mode, temperature of battery and time to calculate capacity of battery) to SD CARD.
