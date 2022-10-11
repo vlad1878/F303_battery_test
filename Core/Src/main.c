@@ -49,6 +49,9 @@
 #define read_state_of_low_charge() (READ_BIT(GPIOC->IDR, GPIO_IDR_1))
 #define read_state_of_discharge() (READ_BIT(GPIOC->IDR,GPIO_IDR_2))
 #define ADC_MAX 0xFFF
+#define BATTERY_LOW_LIMIT 800U
+#define BATTERY_MEDIUM_LIMIT 3300U
+#define BATTERY_HIGH_LIMIT 4500U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -705,16 +708,16 @@ void manual_mode_func(){
 
 void automatik_mode(){
 	if(!control_mode){
-		if(v_bus < 800 && (discharge_enable == 0)){
+		if(v_bus < BATTERY_LOW_LIMIT && (discharge_enable == 0)){
 			low_charge_off();
 			discharge_off();
 			high_charge_on();
 		}
-		else if(v_bus > 3100 && (discharge_enable == 0)){
+		else if(v_bus > BATTERY_MEDIUM_LIMIT && (discharge_enable == 0)){
 			high_charge_off();
 			discharge_off();
 			low_charge_on();
-			if(v_bus >= 4250){
+			if(v_bus >= BATTERY_HIGH_LIMIT){
 				discharge_enable = 1;
 			}
 		}
@@ -722,7 +725,7 @@ void automatik_mode(){
 			low_charge_off();
 			high_charge_off();
 			discharge_on();
-			if(v_bus < 800){
+			if(v_bus < BATTERY_LOW_LIMIT){
 				discharge_enable = 0;
 			}
 		}

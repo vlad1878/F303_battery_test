@@ -37,15 +37,15 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  16 .debug_ranges 00001938  00000000  00000000  00055248  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_macro  0002597c  00000000  00000000  00056b80  2**0
+ 17 .debug_macro  0002598e  00000000  00000000  00056b80  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_line   0002455e  00000000  00000000  0007c4fc  2**0
+ 18 .debug_line   0002455e  00000000  00000000  0007c50e  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .debug_str    000dafd6  00000000  00000000  000a0a5a  2**0
+ 19 .debug_str    000db021  00000000  00000000  000a0a6c  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 20 .comment      00000050  00000000  00000000  0017ba30  2**0
+ 20 .comment      00000050  00000000  00000000  0017ba8d  2**0
                   CONTENTS, READONLY
- 21 .debug_frame  00008390  00000000  00000000  0017ba80  2**2
+ 21 .debug_frame  00008390  00000000  00000000  0017bae0  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -5801,7 +5801,7 @@ void automatik_mode(){
  8002952:	b2db      	uxtb	r3, r3
  8002954:	2b00      	cmp	r3, #0
  8002956:	d064      	beq.n	8002a22 <automatik_mode+0xde>
-		if(v_bus < 800 && (discharge_enable == 0)){
+		if(v_bus < BATTERY_LOW_LIMIT && (discharge_enable == 0)){
  8002958:	4b35      	ldr	r3, [pc, #212]	; (8002a30 <automatik_mode+0xec>)
  800295a:	881b      	ldrh	r3, [r3, #0]
  800295c:	f5b3 7f48 	cmp.w	r3, #800	; 0x320
@@ -5832,10 +5832,10 @@ void automatik_mode(){
  8002992:	6193      	str	r3, [r2, #24]
  8002994:	e027      	b.n	80029e6 <automatik_mode+0xa2>
 		}
-		else if(v_bus > 3100 && (discharge_enable == 0)){
+		else if(v_bus > BATTERY_MEDIUM_LIMIT && (discharge_enable == 0)){
  8002996:	4b26      	ldr	r3, [pc, #152]	; (8002a30 <automatik_mode+0xec>)
  8002998:	881b      	ldrh	r3, [r3, #0]
- 800299a:	f640 421c 	movw	r2, #3100	; 0xc1c
+ 800299a:	f640 42e4 	movw	r2, #3300	; 0xce4
  800299e:	4293      	cmp	r3, r2
  80029a0:	d921      	bls.n	80029e6 <automatik_mode+0xa2>
  80029a2:	4b24      	ldr	r3, [pc, #144]	; (8002a34 <automatik_mode+0xf0>)
@@ -5862,10 +5862,10 @@ void automatik_mode(){
  80029cc:	4a1a      	ldr	r2, [pc, #104]	; (8002a38 <automatik_mode+0xf4>)
  80029ce:	f043 0302 	orr.w	r3, r3, #2
  80029d2:	6193      	str	r3, [r2, #24]
-			if(v_bus >= 4250){
+			if(v_bus >= BATTERY_HIGH_LIMIT){
  80029d4:	4b16      	ldr	r3, [pc, #88]	; (8002a30 <automatik_mode+0xec>)
  80029d6:	881b      	ldrh	r3, [r3, #0]
- 80029d8:	f241 0299 	movw	r2, #4249	; 0x1099
+ 80029d8:	f241 1293 	movw	r2, #4499	; 0x1193
  80029dc:	4293      	cmp	r3, r2
  80029de:	d902      	bls.n	80029e6 <automatik_mode+0xa2>
 				discharge_enable = 1;
@@ -5897,7 +5897,7 @@ void automatik_mode(){
  8002a0a:	4a0b      	ldr	r2, [pc, #44]	; (8002a38 <automatik_mode+0xf4>)
  8002a0c:	f043 0304 	orr.w	r3, r3, #4
  8002a10:	6193      	str	r3, [r2, #24]
-			if(v_bus < 800){
+			if(v_bus < BATTERY_LOW_LIMIT){
  8002a12:	4b07      	ldr	r3, [pc, #28]	; (8002a30 <automatik_mode+0xec>)
  8002a14:	881b      	ldrh	r3, [r3, #0]
  8002a16:	f5b3 7f48 	cmp.w	r3, #800	; 0x320
