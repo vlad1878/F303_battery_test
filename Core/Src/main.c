@@ -191,16 +191,18 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
+  HAL_Delay(100);
   GMG12864_Init();
   INA219_Init(&ina219, &hi2c1, INA219_ADDRESS);
   t_ina219 = HAL_GetTick();
   t_gmg12864 = HAL_GetTick();
   t_sd_card = HAL_GetTick();
   t_ds3231 = HAL_GetTick();
-  max_ds3231_set_hours(19);
-  max_ds3231_set_minutes(58);
+  max_ds3231_set_hours(20);
+  max_ds3231_set_minutes(28);
   max_ds3231_set_seconds(0);
   max_ds3231_set_day(1);
+  HAL_TIM_Base_Start_IT(&htim6);
   HAL_Delay(500);
   if((fresult = f_mount(&fs, "", 0)) != FR_OK){
 	  sprintf(buffer_sd_card, "Card is not detected!!");
@@ -720,7 +722,7 @@ void automatik_mode(){
 			low_charge_off();
 			high_charge_off();
 			discharge_on();
-			if(v_bus <= 5100){
+			if(v_bus < 800){
 				discharge_enable = 0;
 			}
 		}
@@ -788,20 +790,20 @@ void print_gmg12864_level_1(){
 }
 
 void GMG12864_first_line_level_1(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "Voltage is %d         ", v_bus);
+	sprintf(tx_buffer, "Voltage is %d mV         ", v_bus);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_second_line_level_1(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "Current is %.1f    ", Current_ASC712);
+	sprintf(tx_buffer, "Current is %.1f A    ", Current_ASC712);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_third_line_level_1(uint8_t x, uint8_t y){
 
-	sprintf(tx_buffer, "Time is %d :%d :%d    ", Hours, Minutes, Seconds);
+	sprintf(tx_buffer, "Time is %d :%d :%d          ", Hours, Minutes, Seconds);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, buffer_sd_card);
 	GMG12864_Update();
 }
@@ -825,37 +827,37 @@ void GMG12864_sixth_line_level_1(uint8_t x, uint8_t y){
 }
 
 void GMG12864_first_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "This is first line");
+	sprintf(tx_buffer, "Welcome in manual mode! ");
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_second_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "This is second line");
+	sprintf(tx_buffer, "low charge %d        ", state_low_charge);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_third_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "This is third line");
+	sprintf(tx_buffer, "high charge %d       ", state_high_charge);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_fourth_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "This is fourth line");
+	sprintf(tx_buffer, "discharge %d         ", state_discharge);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_fifth_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "This is fifth line");
+	sprintf(tx_buffer, "                     ");
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_sixth_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "This is sixth line");
+	sprintf(tx_buffer, "Time is %d : %d : %d                ", Hours, Minutes, Seconds);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
@@ -864,7 +866,7 @@ void sd_card_write(){
 	if(HAL_GetTick() - t_sd_card > 1000){
 		if((fresult = f_open(&fil, "parameters.txt", FA_OPEN_ALWAYS | FA_WRITE)) == FR_OK){
 			t_sd_card = HAL_GetTick();
-			sprintf(buffer_sd_card, "Time is %d :%d :%d, voltage is %d    ", Hours, Minutes, Seconds, v_bus);
+			sprintf(buffer_sd_card, "Time is %d :%d :%d  ", Hours, Minutes, Seconds);
 			fresult = f_lseek(&fil, fil.fsize);
 			fresult = f_puts("DATA!!!/n", &fil);
 			fresult = f_close(&fil);
