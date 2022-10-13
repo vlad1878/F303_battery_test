@@ -46,7 +46,7 @@ uint16_t SMA_FILTER_Get_Value(uint16_t *SMA_Filter_buffer, uint16_t *RAW_Data) {
 	 *
 	 */
 	//SMA_Filter_Result = SMA_Filter_Result / SMA_FILTER_ORDER;
-	SMA_Filter_Result = SMA_Filter_Result >> 5u; //32 = 2^5;
+	SMA_Filter_Result = SMA_Filter_Result >> 6u; //32 = 2^5;
 
 	/* Сдвинем все элементы массива влево на 1 */
 	for (uint8_t i = 0; i < SMA_FILTER_ORDER; i++) {

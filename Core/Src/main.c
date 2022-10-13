@@ -84,6 +84,7 @@ volatile bool sd_card_init_flag = 0;
 
 INA219_t ina219;
 extern char tx_buffer[128];
+volatile bool ina219_flag = 0;
 uint16_t v_bus, v_shunt, current, power;
 volatile uint8_t display_mode = 0;
 unsigned long t_ina219 = 0;
@@ -112,7 +113,9 @@ float Sensitivity = 0.066f;
 float RawVoltage = 0.0f;
 float Current_ASC712 = 0.0f;
 extern bool adc_flag;
-extern uint16_t ADC_SMA_Data;
+extern uint16_t ADC_SMA_Data_1;
+extern uint16_t ADC_SMA_Data_2;
+float filtered_voltage = 0.0f;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -657,11 +660,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : led_low_charge_Pin */
-  GPIO_InitStruct.Pin = led_low_charge_Pin;
+  /*Configure GPIO pins : led_low_charge_Pin PC8 PC9 */
+  GPIO_InitStruct.Pin = led_low_charge_Pin|GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(led_low_charge_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : CS_Pin RST_Pin DC_Pin user_led_Pin
                            CS_SD_CARD_Pin */
@@ -733,8 +736,9 @@ void automatik_mode(){
 }
 
 void get_param_from_ina219(){
-	if((HAL_GetTick() - t_ina219) > 100){
-		t_ina219 = HAL_GetTick();
+	if(ina219_flag){
+		ina219_flag = 0;
+		filtered_voltage = (float)ADC_SMA_Data_2;
 		v_bus = INA219_ReadBusVoltage(&ina219);
 		v_shunt = INA219_ReadShuntVoltage(&ina219);
 		current = INA219_ReadCurrent(&ina219);
@@ -771,7 +775,7 @@ void read_state_of_relays(){
 }
 
 void print_gmg12864_level_1(){
-	if(((HAL_GetTick() - t_gmg12864) > 200) && (display_mode == 0)){
+	if(((HAL_GetTick() - t_gmg12864) > 300) && (display_mode == 0)){
 		t_gmg12864 = HAL_GetTick();
 		GMG12864_first_line_level_1(0, 0);
 		GMG12864_second_line_level_1(0, 10);
@@ -780,7 +784,7 @@ void print_gmg12864_level_1(){
 		GMG12864_fifth_line_level_1(0, 40);
 		GMG12864_sixth_line_level_1(0, 50);
 	}
-	else if(((HAL_GetTick() - t_gmg12864) > 200) && display_mode){
+	else if(((HAL_GetTick() - t_gmg12864) > 300) && display_mode){
 		t_gmg12864 = HAL_GetTick();
 		GMG12864_first_line_level_2(0, 0);
 		GMG12864_second_line_level_2(0, 10);
@@ -830,31 +834,31 @@ void GMG12864_sixth_line_level_1(uint8_t x, uint8_t y){
 }
 
 void GMG12864_first_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "Welcome in manual mode! ");
+	sprintf(tx_buffer, "Welcome in man. mode!   ");
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_second_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "low charge %d        ", state_low_charge);
+	sprintf(tx_buffer, "low charge %d          ", state_low_charge);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_third_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "high charge %d       ", state_high_charge);
+	sprintf(tx_buffer, "high charge %d         ", state_high_charge);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_fourth_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "discharge %d         ", state_discharge);
+	sprintf(tx_buffer, "discharge %d           ", state_discharge);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_fifth_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "                     ");
+	sprintf(tx_buffer, "Current is %.1f                    ", Current_ASC712);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
@@ -914,10 +918,18 @@ void ds3231_get_time_and_temp(){
 
 float get_current_ASC712(){
 	if(adc_flag){
-		adc_flag = 0;
-		float Current = 0.0f;
-		RawVoltage = (float)ADC_SMA_Data * 3.3f * 2.0f / (float)ADC_MAX;
-		return Current = (RawVoltage - 2.5f) / Sensitivity;
+		if((state_high_charge == 0) && (state_low_charge == 0) && (state_discharge == 0)){
+			adc_flag = 0;
+			float Current = 0.0f;
+			RawVoltage = (float)ADC_SMA_Data_1 * 3.4f * 2.0f / (float)ADC_MAX;
+			return Current = (RawVoltage - 2.43f) / Sensitivity;
+		}
+		else{
+			adc_flag = 0;
+			float Current = 0.0f;
+			RawVoltage = (float)ADC_SMA_Data_1 * 3.4f * 2.0f / (float)ADC_MAX;
+			return Current = (RawVoltage - 2.37f) / Sensitivity;
+		}
 	}
 	else{
 		return 0;

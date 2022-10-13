@@ -43,11 +43,16 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-uint16_t SMA_Filter_Buffer[SMA_FILTER_ORDER] = {0, };
-uint16_t ADC_SMA_Data = 0;
-uint16_t ADC_RAW_Data = 0;
+uint16_t SMA_Filter_Buffer_1[SMA_FILTER_ORDER] = {0, };
+uint16_t SMA_Filter_Buffer_2[SMA_FILTER_ORDER] = {0, };
+uint16_t ADC_SMA_Data_1 = 0;
+uint16_t ADC_RAW_Data_1 = 0;
+uint16_t ADC_SMA_Data_2 = 0;
+uint16_t ADC_RAW_Data_2 = 0;
 uint16_t Counter_DMA_IT = 0;
 bool adc_flag = 0;
+extern bool ina219_flag;
+extern uint16_t v_bus;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -234,8 +239,10 @@ void DMA1_Channel1_IRQHandler(void)
   Counter_DMA_IT++;
   if(Counter_DMA_IT == 1200){
 	  Counter_DMA_IT = 0;
-	  ADC_SMA_Data = SMA_FILTER_Get_Value(SMA_Filter_Buffer, &ADC_RAW_Data);
+	  ADC_SMA_Data_1 = SMA_FILTER_Get_Value(SMA_Filter_Buffer_1, &ADC_RAW_Data_1);
+	  ADC_SMA_Data_2 = SMA_FILTER_Get_Value(SMA_Filter_Buffer_2, &v_bus);
 	  adc_flag = 1;
+	  ina219_flag = 1;
   }
   /* USER CODE END DMA1_Channel1_IRQn 1 */
 }
@@ -292,7 +299,8 @@ void TIM6_DAC_IRQHandler(void)
   /* USER CODE END TIM6_DAC_IRQn 0 */
   HAL_TIM_IRQHandler(&htim6);
   /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
-  HAL_ADC_Start_DMA(&hadc1, &ADC_RAW_Data, 1);
+  HAL_ADC_Start_DMA(&hadc1, &ADC_RAW_Data_1, 1);
+  ina219_flag = 1;
   /* USER CODE END TIM6_DAC_IRQn 1 */
 }
 
