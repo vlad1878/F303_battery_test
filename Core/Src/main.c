@@ -52,6 +52,8 @@
 #define BATTERY_LOW_LIMIT 800U
 #define BATTERY_MEDIUM_LIMIT 3300U
 #define BATTERY_HIGH_LIMIT 4500U
+#define reaction 10
+#define scroll 50
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -74,6 +76,15 @@ TIM_HandleTypeDef htim6;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+uint8_t A = 0;
+uint8_t status, status_old;
+unsigned long Time, Time_old;
+
+volatile bool ERROR_GMG12864 = 0;
+volatile bool ERROR_SD_CARD = 0;
+volatile bool ERROR_INA219 = 0;
+volatile bool ERROR_DS3231 = 0;
+
 FATFS fs;
 FIL fil;
 FRESULT fresult;
@@ -109,6 +120,7 @@ extern uint16_t Year;
 extern float max_ds3231_temp;
 unsigned long t_ds3231 = 0;
 
+unsigned long t_init_gmg12864 = 0;
 float Sensitivity = 0.066f;
 float RawVoltage = 0.0f;
 float Current_ASC712 = 0.0f;
@@ -199,11 +211,14 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_Delay(100);
   GMG12864_Init();
+  GMG12864_logo_demonstration();
+  HAL_Delay(2000);
   INA219_Init(&ina219, &hi2c1, INA219_ADDRESS);
   t_ina219 = HAL_GetTick();
   t_gmg12864 = HAL_GetTick();
   t_sd_card = HAL_GetTick();
   t_ds3231 = HAL_GetTick();
+  t_init_gmg12864 = HAL_GetTick();
   max_ds3231_set_hours(20);
   max_ds3231_set_minutes(28);
   max_ds3231_set_seconds(0);
@@ -233,6 +248,10 @@ int main(void)
 	  sd_card_write();
 	  manual_init_sd_card();
 	  Current_ASC712 = get_current_ASC712();
+	  if(HAL_GetTick() - t_init_gmg12864 > 100000){
+		  t_init_gmg12864 = HAL_GetTick();
+		  GMG12864_Init();
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -476,7 +495,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -676,6 +695,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
@@ -684,6 +706,7 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void manual_mode_func(){
 	if(control_mode){
+		manual_mode = A;
 		switch(manual_mode){
 		case 0:
 			high_charge_off();
@@ -757,14 +780,134 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 			display_mode = 0;
 		}
 	}
+	if(GPIO_Pin == GPIO_PIN_8){
+		if (!(GPIOA->IDR & GPIO_PIN_8) && (!(GPIOA->IDR & GPIO_PIN_9))) {
+			status = 0x00;
+		} else if ((GPIOA->IDR & GPIO_PIN_8) && (!(GPIOA->IDR & GPIO_PIN_9))) {
+			status = 0x10;
+		} else if ((GPIOA->IDR & GPIO_PIN_8) && (GPIOA->IDR & GPIO_PIN_9)) {
+			status = 0x11;
+		} else if (!(GPIOA->IDR & GPIO_PIN_8) && (GPIOA->IDR & GPIO_PIN_9)) {
+			status = 0x01;
+		}
+
+		if (status_old == 0x10 && status == 0x11) {
+			Time = HAL_GetTick();
+			if (Time - Time_old < reaction) {
+				A = A + scroll;
+			} else {
+				A = A + 1;
+			}
+			Time_old = Time;
+		} else if (status_old == 0x01 && status == 0x00) {
+			Time = HAL_GetTick();
+			if (Time - Time_old < reaction) {
+				A = A + scroll;
+			} else {
+				A = A + 1;
+			}
+			Time_old = Time;
+		}
+
+		if (status_old == 0x11 && status == 0x10) {
+			status_old = 0x10;
+
+		} else if (status_old == 0x00 && status == 0x01) {
+			status_old = 0x01;
+
+		}
+
+		else if (status_old == 0x10 && status == 0x00) {
+			Time = HAL_GetTick();
+			if (Time - Time_old < reaction) {
+				A = A - scroll;
+			} else {
+				A = A - 1;
+			}
+			Time_old = Time;
+		}
+
+		else if (status_old == 0x01 && status == 0x11) {
+			Time = HAL_GetTick();
+			if (Time - Time_old < reaction) {
+				A = A - scroll;
+			} else {
+				A = A - 1;
+			}
+			Time_old = Time;
+		}
+		status_old = status;
+	}
+	if(GPIO_Pin == GPIO_PIN_9){
+		if (!(GPIOA->IDR & GPIO_PIN_8) && (!(GPIOA->IDR & GPIO_PIN_9))) {
+			status = 0x00;
+		} else if ((GPIOA->IDR & GPIO_PIN_8) && (!(GPIOA->IDR & GPIO_PIN_9))) {
+			status = 0x10;
+		} else if ((GPIOA->IDR & GPIO_PIN_8) && (GPIOA->IDR & GPIO_PIN_9)) {
+			status = 0x11;
+		} else if (!(GPIOA->IDR & GPIO_PIN_8) && (GPIOA->IDR & GPIO_PIN_9)) {
+			status = 0x01;
+		}
+
+		if (status_old == 0x10 && status == 0x11) {
+			Time = HAL_GetTick();
+			if (Time - Time_old < reaction) {
+				A = A + scroll;
+			} else {
+				A = A + 1;
+			}
+			Time_old = Time;
+		} else if (status_old == 0x01 && status == 0x00) {
+			Time = HAL_GetTick();
+			if (Time - Time_old < reaction) {
+				A = A + scroll;
+			} else {
+				A = A + 1;
+			}
+			Time_old = Time;
+		}
+
+		if (status_old == 0x11 && status == 0x10) {
+			status_old = 0x10;
+
+		} else if (status_old == 0x00 && status == 0x01) {
+			status_old = 0x01;
+
+		}
+
+		else if (status_old == 0x10 && status == 0x00) {
+			Time = HAL_GetTick();
+			if (Time - Time_old < reaction) {
+				A = A - scroll;
+			} else {
+				A = A - 1;
+			}
+			Time_old = Time;
+		}
+
+		else if (status_old == 0x01 && status == 0x11) {
+			Time = HAL_GetTick();
+			if (Time - Time_old < reaction) {
+				A = A - scroll;
+			} else {
+				A = A - 1;
+			}
+			Time_old = Time;
+		}
+		status_old = status;
+	}
+
 }
+
 
 void mode_change_func(){
 	if(flag_change_mode){
+		GMG12864_Clean_Frame_buffer();
 		flag_change_mode = 0;
 		high_charge_off();
 		low_charge_off();
 		discharge_off();
+		A = 0;
 	}
 }
 
