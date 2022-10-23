@@ -76,9 +76,9 @@ TIM_HandleTypeDef htim6;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-uint8_t A = 0;
-uint8_t status, status_old;
-unsigned long Time, Time_old;
+volatile uint8_t A = 0;
+volatile uint8_t status, status_old = 0x00;
+volatile unsigned long Time, Time_old = 0;
 
 volatile bool ERROR_GMG12864 = 0;
 volatile bool ERROR_SD_CARD = 0;
@@ -105,7 +105,7 @@ bool state_high_charge = 0;
 bool state_low_charge = 0;
 bool state_discharge = 0;
 bool discharge_enable = 0;
-volatile bool control_mode = 0;
+volatile bool control_mode = 1;
 uint8_t manual_mode = 0;
 volatile bool flag_change_mode = 0;
 
@@ -160,6 +160,12 @@ void GMG12864_third_line_level_2(uint8_t x, uint8_t y);
 void GMG12864_fourth_line_level_2(uint8_t x, uint8_t y);
 void GMG12864_fifth_line_level_2(uint8_t x, uint8_t y);
 void GMG12864_sixth_line_level_2(uint8_t x, uint8_t y);
+void GMG12864_first_line_level_3(uint8_t x, uint8_t y);
+void GMG12864_second_line_level_3(uint8_t x, uint8_t y);
+void GMG12864_third_line_level_3(uint8_t x, uint8_t y);
+void GMG12864_fourth_line_level_3(uint8_t x, uint8_t y);
+void GMG12864_fifth_line_level_3(uint8_t x, uint8_t y);
+void GMG12864_sixth_line_level_3(uint8_t x, uint8_t y);
 void sd_card_write(void);
 void manual_init_sd_card(void);
 void ds3231_get_time_and_temp(void);
@@ -495,7 +501,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -705,7 +711,7 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 void manual_mode_func(){
-	if(control_mode){
+	if(!control_mode){
 		manual_mode = A;
 		switch(manual_mode){
 		case 0:
@@ -733,7 +739,7 @@ void manual_mode_func(){
 }
 
 void automatik_mode(){
-	if(!control_mode){
+	if(control_mode){
 		if(v_bus < BATTERY_LOW_LIMIT && (discharge_enable == 0)){
 			low_charge_off();
 			discharge_off();
@@ -771,9 +777,8 @@ void get_param_from_ina219(){
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == (0x2000)){
-		control_mode = !control_mode;
-		flag_change_mode = 1;
-		if(display_mode < 1){
+		//flag_change_mode = 1;
+		if((display_mode < 2) && (display_mode >= 0)){
 			display_mode += 1;
 		}
 		else{
@@ -781,13 +786,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		}
 	}
 	if(GPIO_Pin == GPIO_PIN_8){
-		if (!(GPIOA->IDR & GPIO_PIN_8) && (!(GPIOA->IDR & GPIO_PIN_9))) {
+		if (!(GPIOC->IDR & GPIO_PIN_8) && (!(GPIOC->IDR & GPIO_PIN_9))) {
 			status = 0x00;
-		} else if ((GPIOA->IDR & GPIO_PIN_8) && (!(GPIOA->IDR & GPIO_PIN_9))) {
+		} else if ((GPIOC->IDR & GPIO_PIN_8) && (!(GPIOC->IDR & GPIO_PIN_9))) {
 			status = 0x10;
-		} else if ((GPIOA->IDR & GPIO_PIN_8) && (GPIOA->IDR & GPIO_PIN_9)) {
+		} else if ((GPIOC->IDR & GPIO_PIN_8) && (GPIOC->IDR & GPIO_PIN_9)) {
 			status = 0x11;
-		} else if (!(GPIOA->IDR & GPIO_PIN_8) && (GPIOA->IDR & GPIO_PIN_9)) {
+		} else if (!(GPIOC->IDR & GPIO_PIN_8) && (GPIOC->IDR & GPIO_PIN_9)) {
 			status = 0x01;
 		}
 
@@ -839,13 +844,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		status_old = status;
 	}
 	if(GPIO_Pin == GPIO_PIN_9){
-		if (!(GPIOA->IDR & GPIO_PIN_8) && (!(GPIOA->IDR & GPIO_PIN_9))) {
+		if (!(GPIOC->IDR & GPIO_PIN_8) && (!(GPIOC->IDR & GPIO_PIN_9))) {
 			status = 0x00;
-		} else if ((GPIOA->IDR & GPIO_PIN_8) && (!(GPIOA->IDR & GPIO_PIN_9))) {
+		} else if ((GPIOC->IDR & GPIO_PIN_8) && (!(GPIOC->IDR & GPIO_PIN_9))) {
 			status = 0x10;
-		} else if ((GPIOA->IDR & GPIO_PIN_8) && (GPIOA->IDR & GPIO_PIN_9)) {
+		} else if ((GPIOC->IDR & GPIO_PIN_8) && (GPIOC->IDR & GPIO_PIN_9)) {
 			status = 0x11;
-		} else if (!(GPIOA->IDR & GPIO_PIN_8) && (GPIOA->IDR & GPIO_PIN_9)) {
+		} else if (!(GPIOC->IDR & GPIO_PIN_8) && (GPIOC->IDR & GPIO_PIN_9)) {
 			status = 0x01;
 		}
 
@@ -927,7 +932,7 @@ void print_gmg12864_level_1(){
 		GMG12864_fifth_line_level_1(0, 40);
 		GMG12864_sixth_line_level_1(0, 50);
 	}
-	else if(((HAL_GetTick() - t_gmg12864) > 300) && display_mode){
+	else if(((HAL_GetTick() - t_gmg12864) > 300) && (display_mode == 1)){
 		t_gmg12864 = HAL_GetTick();
 		GMG12864_first_line_level_2(0, 0);
 		GMG12864_second_line_level_2(0, 10);
@@ -935,7 +940,15 @@ void print_gmg12864_level_1(){
 		GMG12864_fourth_line_level_2(0, 30);
 		GMG12864_fifth_line_level_2(0, 40);
 		GMG12864_sixth_line_level_2(0, 50);
-
+	}
+	else if(((HAL_GetTick() - t_gmg12864) > 300) && (display_mode == 2)){
+		t_gmg12864 = HAL_GetTick();
+		GMG12864_first_line_level_3(0, 0);
+		GMG12864_second_line_level_3(0, 10);
+		GMG12864_third_line_level_3(0, 20);
+		GMG12864_fourth_line_level_3(0, 30);
+		GMG12864_fifth_line_level_3(0, 40);
+		GMG12864_sixth_line_level_3(0, 50);
 	}
 }
 
@@ -952,9 +965,8 @@ void GMG12864_second_line_level_1(uint8_t x, uint8_t y){
 }
 
 void GMG12864_third_line_level_1(uint8_t x, uint8_t y){
-
-	sprintf(tx_buffer, "Time is %d :%d :%d          ", Hours, Minutes, Seconds);
-	GMG12864_Decode_UTF8(x, y, 1, inversion_off, buffer_sd_card);
+	sprintf(tx_buffer, "discharge %d         ", state_discharge);
+	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
@@ -971,37 +983,36 @@ void GMG12864_fifth_line_level_1(uint8_t x, uint8_t y){
 }
 
 void GMG12864_sixth_line_level_1(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "discharge %d         ", state_discharge);
+	sprintf(tx_buffer, "Time is %d :%d :%d          ", Hours, Minutes, Seconds);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_first_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "Welcome in man. mode!   ");
+	sprintf(tx_buffer, "SD CARD Parameters     ");
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_second_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "low charge %d          ", state_low_charge);
+	sprintf(tx_buffer, "Counter SD %d          ", counter_sd_card);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_third_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "high charge %d         ", state_high_charge);
-	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
+	GMG12864_Decode_UTF8(x, y, 1, inversion_off, buffer_sd_card);
 	GMG12864_Update();
 }
 
 void GMG12864_fourth_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "discharge %d           ", state_discharge);
+	sprintf(tx_buffer, "                     ");
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_fifth_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "Current is %.1f                    ", Current_ASC712);
+	sprintf(tx_buffer, "                      ");
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
@@ -1012,11 +1023,47 @@ void GMG12864_sixth_line_level_2(uint8_t x, uint8_t y){
 	GMG12864_Update();
 }
 
+void GMG12864_first_line_level_3(uint8_t x, uint8_t y){
+	sprintf(tx_buffer, "DS3231 Parameters            ");
+	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
+	GMG12864_Update();
+}
+
+void GMG12864_second_line_level_3(uint8_t x, uint8_t y){
+	sprintf(tx_buffer, "Time is %d : %d : %d                ", Hours, Minutes, Seconds);
+	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
+	GMG12864_Update();
+}
+
+void GMG12864_third_line_level_3(uint8_t x, uint8_t y){
+	sprintf(tx_buffer, "Temp. DS3231 %.1f                ", max_ds3231_temp);
+	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
+	GMG12864_Update();
+}
+
+void GMG12864_fourth_line_level_3(uint8_t x, uint8_t y){
+	sprintf(tx_buffer, "Day %d                ", Day);
+	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
+	GMG12864_Update();
+}
+
+void GMG12864_fifth_line_level_3(uint8_t x, uint8_t y){
+	sprintf(tx_buffer, "Date %d              ", Date);
+	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
+	GMG12864_Update();
+}
+
+void GMG12864_sixth_line_level_3(uint8_t x, uint8_t y){
+	sprintf(tx_buffer, "Month %d             ", Month);
+	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
+	GMG12864_Update();
+}
+
 void sd_card_write(){
 	if(HAL_GetTick() - t_sd_card > 1000){
 		if((fresult = f_open(&fil, "parameters.txt", FA_OPEN_ALWAYS | FA_WRITE)) == FR_OK){
 			t_sd_card = HAL_GetTick();
-			sprintf(buffer_sd_card, "Time is %d :%d :%d  ", Hours, Minutes, Seconds);
+			sprintf(buffer_sd_card, "SD CARD OK!");
 			fresult = f_lseek(&fil, fil.fsize);
 			fresult = f_puts("DATA!!!/n", &fil);
 			fresult = f_close(&fil);
@@ -1025,12 +1072,12 @@ void sd_card_write(){
 		}
 		else if((fresult = f_open(&fil, "parameters.txt", FA_OPEN_ALWAYS | FA_WRITE)) == FR_DISK_ERR){
 			t_sd_card = HAL_GetTick();
-			sprintf(buffer_sd_card, "Card is not detected!!");
+			sprintf(buffer_sd_card, "SD CARD not detected!");
 			SET_BIT(GPIOA->BSRR, GPIO_BSRR_BS_5);
 		}
 		else{
 			t_sd_card = HAL_GetTick();
-			sprintf(buffer_sd_card, "Problem with sd card!!");
+			sprintf(buffer_sd_card, "SD CARD not communicate!!!");
 			SET_BIT(GPIOA->BSRR, GPIO_BSRR_BS_5);
 		}
 	}
