@@ -91,7 +91,6 @@ FRESULT fresult;
 char buffer_sd_card[1024];
 uint16_t br, bw;
 uint16_t counter_sd_card = 0;
-volatile bool sd_card_init_flag = 0;
 
 INA219_t ina219;
 extern char tx_buffer[128];
@@ -167,9 +166,9 @@ void GMG12864_fourth_line_level_3(uint8_t x, uint8_t y);
 void GMG12864_fifth_line_level_3(uint8_t x, uint8_t y);
 void GMG12864_sixth_line_level_3(uint8_t x, uint8_t y);
 void sd_card_write(void);
-void manual_init_sd_card(void);
 void ds3231_get_time_and_temp(void);
 float get_current_ASC712(void);
+void button_mode_func(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -252,7 +251,7 @@ int main(void)
 	  mode_change_func();
 	  print_gmg12864_level_1();
 	  sd_card_write();
-	  manual_init_sd_card();
+	  button_mode_func();
 	  Current_ASC712 = get_current_ASC712();
 	  if(HAL_GetTick() - t_init_gmg12864 > 100000){
 		  t_init_gmg12864 = HAL_GetTick();
@@ -700,6 +699,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : Button_Mode_Pin */
+  GPIO_InitStruct.Pin = Button_Mode_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(Button_Mode_GPIO_Port, &GPIO_InitStruct);
+
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
@@ -916,6 +921,15 @@ void mode_change_func(){
 	}
 }
 
+void button_mode_func(){
+	if(!(READ_BIT(GPIOC->IDR, GPIO_IDR_7))){
+		control_mode = 0;
+	}
+	else{
+		control_mode = 1;
+	}
+}
+
 void read_state_of_relays(){
 	state_high_charge = read_state_of_high_charge();
 	state_low_charge = read_state_of_low_charge();
@@ -1080,21 +1094,6 @@ void sd_card_write(){
 			sprintf(buffer_sd_card, "SD CARD not communicate!!!");
 			SET_BIT(GPIOA->BSRR, GPIO_BSRR_BS_5);
 		}
-	}
-}
-
-void manual_init_sd_card(){
-	if(sd_card_init_flag){
-		sd_card_init_flag = 0;
-		memset(&fs, 0, sizeof(fs));
-		fresult = f_mount(&fs, "", 0);
-		HAL_Delay(50);
-		fresult = f_mount(&fs, "", 0);
-		HAL_Delay(50);
-		fresult = f_mount(&fs, "", 0);
-		HAL_Delay(50);
-		fresult = f_mount(&fs, "", 0);
-		HAL_Delay(50);
 	}
 }
 

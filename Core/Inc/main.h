@@ -86,6 +86,8 @@ void Error_Handler(void);
 #define led_high_charge_GPIO_Port GPIOC
 #define led_discharge_Pin GPIO_PIN_5
 #define led_discharge_GPIO_Port GPIOC
+#define Button_Mode_Pin GPIO_PIN_7
+#define Button_Mode_GPIO_Port GPIOC
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
