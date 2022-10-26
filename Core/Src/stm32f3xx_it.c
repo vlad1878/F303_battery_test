@@ -58,6 +58,8 @@ extern volatile bool ERROR_GMG12864;
 extern volatile bool ERROR_SD_CARD;
 extern volatile bool ERROR_INA219;
 extern volatile bool ERROR_DS3231;
+
+extern volatile uint16_t tim7_counter;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -86,6 +88,7 @@ extern I2C_HandleTypeDef hi2c2;
 extern SPI_HandleTypeDef hspi1;
 extern SPI_HandleTypeDef hspi2;
 extern TIM_HandleTypeDef htim6;
+extern TIM_HandleTypeDef htim7;
 /* USER CODE BEGIN EV */
 extern ADC_HandleTypeDef hadc1;
 /* USER CODE END EV */
@@ -352,6 +355,20 @@ void TIM6_DAC_IRQHandler(void)
   HAL_ADC_Start_DMA(&hadc1, &ADC_RAW_Data_1, 1);
   ina219_flag = 1;
   /* USER CODE END TIM6_DAC_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM7 global interrupt.
+  */
+void TIM7_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM7_IRQn 0 */
+
+  /* USER CODE END TIM7_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim7);
+  /* USER CODE BEGIN TIM7_IRQn 1 */
+  tim7_counter += 1;
+  /* USER CODE END TIM7_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

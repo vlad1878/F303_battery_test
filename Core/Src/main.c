@@ -50,7 +50,7 @@
 #define read_state_of_discharge() (READ_BIT(GPIOC->IDR,GPIO_IDR_2))
 #define ADC_MAX 0xFFF
 #define BATTERY_LOW_LIMIT 800U
-#define BATTERY_MEDIUM_LIMIT 3300U
+#define BATTERY_MEDIUM_LIMIT 3200U
 #define BATTERY_HIGH_LIMIT 4500U
 #define reaction 10
 #define scroll 50
@@ -71,12 +71,14 @@ I2C_HandleTypeDef hi2c2;
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 
+TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim6;
+TIM_HandleTypeDef htim7;
 
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-volatile uint8_t A = 0;
+volatile int8_t A = 0;
 volatile uint8_t status, status_old = 0x00;
 volatile unsigned long Time, Time_old = 0;
 
@@ -100,6 +102,7 @@ volatile uint8_t display_mode = 0;
 unsigned long t_ina219 = 0;
 unsigned long t_gmg12864 = 0;
 unsigned long t_sd_card = 0;
+unsigned long t_button_mode_led = 0;
 bool state_high_charge = 0;
 bool state_low_charge = 0;
 bool state_discharge = 0;
@@ -127,6 +130,12 @@ extern bool adc_flag;
 extern uint16_t ADC_SMA_Data_1;
 extern uint16_t ADC_SMA_Data_2;
 float filtered_voltage = 0.0f;
+
+enum  Mode{HIGH_CHARGE, LOW_CHARGE, DISCHARGE};
+uint8_t Current_Mode = 0;
+uint8_t Prev_Mode = 2;
+
+volatile uint16_t tim7_counter = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -140,6 +149,8 @@ static void MX_SPI2_Init(void);
 static void MX_I2C2_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM6_Init(void);
+static void MX_TIM3_Init(void);
+static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
 void automatik_mode(void);
 void get_param_from_ina219(void);
@@ -169,6 +180,9 @@ void sd_card_write(void);
 void ds3231_get_time_and_temp(void);
 float get_current_ASC712(void);
 void button_mode_func(void);
+void button_mode_led_delay(void);
+void tim7_start(void);
+void tim7_stop(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -213,6 +227,8 @@ int main(void)
   MX_I2C2_Init();
   MX_ADC1_Init();
   MX_TIM6_Init();
+  MX_TIM3_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
   HAL_Delay(100);
   GMG12864_Init();
@@ -224,11 +240,16 @@ int main(void)
   t_sd_card = HAL_GetTick();
   t_ds3231 = HAL_GetTick();
   t_init_gmg12864 = HAL_GetTick();
+  t_button_mode_led = HAL_GetTick();
   max_ds3231_set_hours(20);
   max_ds3231_set_minutes(28);
   max_ds3231_set_seconds(0);
   max_ds3231_set_day(1);
   HAL_TIM_Base_Start_IT(&htim6);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+  TIM3->CCR1 = 0;
+  TIM3->CCR2 = 0;
   HAL_Delay(500);
   if((fresult = f_mount(&fs, "", 0)) != FR_OK){
 	  sprintf(buffer_sd_card, "Card is not detected!!");
@@ -304,11 +325,13 @@ void SystemClock_Config(void)
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2|RCC_PERIPHCLK_I2C1
-                              |RCC_PERIPHCLK_I2C2|RCC_PERIPHCLK_ADC12;
+                              |RCC_PERIPHCLK_I2C2|RCC_PERIPHCLK_ADC12
+                              |RCC_PERIPHCLK_TIM34;
   PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
   PeriphClkInit.Adc12ClockSelection = RCC_ADC12PLLCLK_DIV1;
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
   PeriphClkInit.I2c2ClockSelection = RCC_I2C2CLKSOURCE_HSI;
+  PeriphClkInit.Tim34ClockSelection = RCC_TIM34CLK_HCLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
@@ -558,6 +581,69 @@ static void MX_SPI2_Init(void)
 }
 
 /**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 71;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 1000;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+  HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/**
   * @brief TIM6 Initialization Function
   * @param None
   * @retval None
@@ -592,6 +678,44 @@ static void MX_TIM6_Init(void)
   /* USER CODE BEGIN TIM6_Init 2 */
 
   /* USER CODE END TIM6_Init 2 */
+
+}
+
+/**
+  * @brief TIM7 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM7_Init(void)
+{
+
+  /* USER CODE BEGIN TIM7_Init 0 */
+
+  /* USER CODE END TIM7_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM7_Init 1 */
+
+  /* USER CODE END TIM7_Init 1 */
+  htim7.Instance = TIM7;
+  htim7.Init.Prescaler = 7199;
+  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim7.Init.Period = 10000;
+  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM7_Init 2 */
+
+  /* USER CODE END TIM7_Init 2 */
 
 }
 
@@ -717,6 +841,7 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void manual_mode_func(){
 	if(!control_mode){
+		TIM3->CCR1 = 1000;
 		manual_mode = A;
 		switch(manual_mode){
 		case 0:
@@ -745,25 +870,34 @@ void manual_mode_func(){
 
 void automatik_mode(){
 	if(control_mode){
-		if(v_bus < BATTERY_LOW_LIMIT && (discharge_enable == 0)){
+		button_mode_led_delay();
+		if(v_bus < BATTERY_LOW_LIMIT && (discharge_enable == 0) && (Prev_Mode == DISCHARGE)){
 			low_charge_off();
 			discharge_off();
 			high_charge_on();
+			Prev_Mode = HIGH_CHARGE;
 		}
-		else if(v_bus > BATTERY_MEDIUM_LIMIT && (discharge_enable == 0)){
+		else if((v_bus > BATTERY_MEDIUM_LIMIT) && (discharge_enable == 0) && (Prev_Mode == HIGH_CHARGE)){
 			high_charge_off();
 			discharge_off();
 			low_charge_on();
-			if(v_bus >= BATTERY_HIGH_LIMIT){
-				discharge_enable = 1;
-			}
+			tim7_start();
+			Prev_Mode = LOW_CHARGE;
+			discharge_enable = 1;
+			//if(v_bus >= BATTERY_HIGH_LIMIT){
+				//discharge_enable = 1;
+				//Prev_Mode = LOW_CHARGE;
+			//}
 		}
-		if(discharge_enable){
+		if(discharge_enable && (Prev_Mode == LOW_CHARGE) && (tim7_counter >= 10)){
+			tim7_stop();
 			low_charge_off();
 			high_charge_off();
 			discharge_on();
 			if(v_bus < BATTERY_LOW_LIMIT){
 				discharge_enable = 0;
+				Prev_Mode = DISCHARGE;
+				tim7_counter = 0;
 			}
 		}
 	}
@@ -783,7 +917,7 @@ void get_param_from_ina219(){
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == (0x2000)){
 		//flag_change_mode = 1;
-		if((display_mode < 2) && (display_mode >= 0)){
+		if((display_mode < 3) && (display_mode >= 0)){
 			display_mode += 1;
 		}
 		else{
@@ -805,16 +939,28 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 			Time = HAL_GetTick();
 			if (Time - Time_old < reaction) {
 				A = A + scroll;
+				if(A > 3){
+					A = 3;
+				}
 			} else {
 				A = A + 1;
+				if(A > 3){
+					A = 3;
+				}
 			}
 			Time_old = Time;
 		} else if (status_old == 0x01 && status == 0x00) {
 			Time = HAL_GetTick();
 			if (Time - Time_old < reaction) {
 				A = A + scroll;
+				if(A > 3){
+					A = 3;
+				}
 			} else {
 				A = A + 1;
+				if(A > 3){
+					A = 3;
+				}
 			}
 			Time_old = Time;
 		}
@@ -831,8 +977,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 			Time = HAL_GetTick();
 			if (Time - Time_old < reaction) {
 				A = A - scroll;
+				if(A < 0){
+					A = 0;
+				}
 			} else {
 				A = A - 1;
+				if(A < 0){
+					A = 0;
+				}
 			}
 			Time_old = Time;
 		}
@@ -841,8 +993,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 			Time = HAL_GetTick();
 			if (Time - Time_old < reaction) {
 				A = A - scroll;
+				if(A < 0){
+					A = 0;
+				}
 			} else {
 				A = A - 1;
+				if(A < 0){
+					A = 0;
+				}
 			}
 			Time_old = Time;
 		}
@@ -863,16 +1021,28 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 			Time = HAL_GetTick();
 			if (Time - Time_old < reaction) {
 				A = A + scroll;
+				if(A > 3){
+					A = 3;
+				}
 			} else {
 				A = A + 1;
+				if(A > 3){
+					A = 3;
+				}
 			}
 			Time_old = Time;
 		} else if (status_old == 0x01 && status == 0x00) {
 			Time = HAL_GetTick();
 			if (Time - Time_old < reaction) {
 				A = A + scroll;
+				if(A > 3){
+					A = 3;
+				}
 			} else {
 				A = A + 1;
+				if(A > 3){
+					A = 3;
+				}
 			}
 			Time_old = Time;
 		}
@@ -889,8 +1059,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 			Time = HAL_GetTick();
 			if (Time - Time_old < reaction) {
 				A = A - scroll;
+				if(A < 0){
+					A = 0;
+				}
 			} else {
 				A = A - 1;
+				if(A < 0){
+					A = 0;
+				}
 			}
 			Time_old = Time;
 		}
@@ -899,8 +1075,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 			Time = HAL_GetTick();
 			if (Time - Time_old < reaction) {
 				A = A - scroll;
+				if(A < 0){
+					A = 0;
+				}
 			} else {
 				A = A - 1;
+				if(A < 0){
+					A = 0;
+				}
 			}
 			Time_old = Time;
 		}
@@ -930,10 +1112,43 @@ void button_mode_func(){
 	}
 }
 
+void button_mode_led_delay(){
+	if(control_mode){
+		static uint16_t i = 0;
+		static bool flag = 0;
+		if((i <= 999) && (!flag) && (HAL_GetTick() - t_button_mode_led > 10)){
+			t_button_mode_led = HAL_GetTick();
+			i = 1000;
+			TIM3->CCR1 = i;
+			if(i == 1000){
+				flag = 1;
+			}
+		}
+		else if((flag == 1) && (HAL_GetTick() - t_button_mode_led > 10)){
+			t_button_mode_led = HAL_GetTick();
+			i = 0;
+			TIM3->CCR1 = i;
+			if(i <= 1){
+				flag = 0;
+			}
+		}
+
+	}
+}
+
 void read_state_of_relays(){
 	state_high_charge = read_state_of_high_charge();
 	state_low_charge = read_state_of_low_charge();
 	state_discharge = read_state_of_discharge();
+	if(state_high_charge){
+		Current_Mode = HIGH_CHARGE;
+	}
+	else if(state_low_charge){
+		Current_Mode = LOW_CHARGE;
+	}
+	else if(state_discharge){
+		Current_Mode = DISCHARGE;
+	}
 }
 
 void print_gmg12864_level_1(){
@@ -1077,7 +1292,7 @@ void sd_card_write(){
 	if(HAL_GetTick() - t_sd_card > 1000){
 		if((fresult = f_open(&fil, "parameters.txt", FA_OPEN_ALWAYS | FA_WRITE)) == FR_OK){
 			t_sd_card = HAL_GetTick();
-			sprintf(buffer_sd_card, "SD CARD OK!");
+			sprintf(buffer_sd_card, "SD CARD OK!         ");
 			fresult = f_lseek(&fil, fil.fsize);
 			fresult = f_puts("DATA!!!/n", &fil);
 			fresult = f_close(&fil);
@@ -1086,12 +1301,12 @@ void sd_card_write(){
 		}
 		else if((fresult = f_open(&fil, "parameters.txt", FA_OPEN_ALWAYS | FA_WRITE)) == FR_DISK_ERR){
 			t_sd_card = HAL_GetTick();
-			sprintf(buffer_sd_card, "SD CARD not detected!");
+			sprintf(buffer_sd_card, "SD CARD not detected!     ");
 			SET_BIT(GPIOA->BSRR, GPIO_BSRR_BS_5);
 		}
 		else{
 			t_sd_card = HAL_GetTick();
-			sprintf(buffer_sd_card, "SD CARD not communicate!!!");
+			sprintf(buffer_sd_card, "SD CARD not communicate!!!    ");
 			SET_BIT(GPIOA->BSRR, GPIO_BSRR_BS_5);
 		}
 	}
@@ -1123,6 +1338,15 @@ float get_current_ASC712(){
 	else{
 		return 0;
 	}
+}
+
+void tim7_start(){
+	HAL_TIM_Base_Start_IT(&htim7);
+}
+
+void tim7_stop(){
+	HAL_TIM_Base_Stop_IT(&htim7);
+	TIM7->CNT = 0;
 }
 /* USER CODE END 4 */
 
