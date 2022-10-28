@@ -49,11 +49,12 @@
 #define read_state_of_low_charge() (READ_BIT(GPIOC->IDR, GPIO_IDR_1))
 #define read_state_of_discharge() (READ_BIT(GPIOC->IDR,GPIO_IDR_2))
 #define ADC_MAX 0xFFF
-#define BATTERY_LOW_LIMIT 800U
-#define BATTERY_MEDIUM_LIMIT 3200U
-#define BATTERY_HIGH_LIMIT 4500U
+#define BATTERY_LOW_LIMIT 5100U
+#define BATTERY_MEDIUM_LIMIT 7100U
+#define BATTERY_HIGH_LIMIT 7300U
 #define reaction 10
 #define scroll 50
+#define DELAY_LOW_CHARGE_IN_SEC 160U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -241,10 +242,10 @@ int main(void)
   t_ds3231 = HAL_GetTick();
   t_init_gmg12864 = HAL_GetTick();
   t_button_mode_led = HAL_GetTick();
-  max_ds3231_set_hours(20);
-  max_ds3231_set_minutes(28);
-  max_ds3231_set_seconds(0);
-  max_ds3231_set_day(1);
+ // max_ds3231_set_hours(7);
+  //max_ds3231_set_minutes(38);
+  //max_ds3231_set_seconds(0);
+  //max_ds3231_set_day(1);
   HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
@@ -889,7 +890,7 @@ void automatik_mode(){
 				//Prev_Mode = LOW_CHARGE;
 			//}
 		}
-		if(discharge_enable && (Prev_Mode == LOW_CHARGE) && (tim7_counter >= 10)){
+		if(discharge_enable && (Prev_Mode == LOW_CHARGE) && (tim7_counter >= DELAY_LOW_CHARGE_IN_SEC)){
 			tim7_stop();
 			low_charge_off();
 			high_charge_off();
@@ -1100,6 +1101,7 @@ void mode_change_func(){
 		low_charge_off();
 		discharge_off();
 		A = 0;
+		Prev_Mode = DISCHARGE;
 	}
 }
 
@@ -1230,7 +1232,8 @@ void GMG12864_second_line_level_2(uint8_t x, uint8_t y){
 }
 
 void GMG12864_third_line_level_2(uint8_t x, uint8_t y){
-	GMG12864_Decode_UTF8(x, y, 1, inversion_off, buffer_sd_card);
+	sprintf(tx_buffer, "Timer low charge %d", tim7_counter);
+	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
