@@ -39,12 +39,13 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define high_charge_on() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BS_0))
-#define low_charge_on() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BS_1))
-#define discharge_on() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BS_2))
-#define high_charge_off() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BR_0))
-#define low_charge_off() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BR_1))
-#define discharge_off() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BR_2))
+
+#define high_charge_on() (WRITE_REG(GPIOC->BSRR, GPIO_BSRR_BS_0))
+#define low_charge_on() (WRITE_REG(GPIOC->BSRR, GPIO_BSRR_BS_1))
+#define discharge_on() (WRITE_REG(GPIOC->BSRR, GPIO_BSRR_BS_2))
+#define high_charge_off() (WRITE_REG(GPIOC->BSRR, GPIO_BSRR_BR_0))
+#define low_charge_off() (WRITE_REG(GPIOC->BSRR, GPIO_BSRR_BR_1))
+#define discharge_off() (WRITE_REG(GPIOC->BSRR, GPIO_BSRR_BR_2))
 #define read_state_of_high_charge() (READ_BIT(GPIOC->IDR, GPIO_IDR_0))
 #define read_state_of_low_charge() (READ_BIT(GPIOC->IDR, GPIO_IDR_1))
 #define read_state_of_discharge() (READ_BIT(GPIOC->IDR,GPIO_IDR_2))
@@ -254,7 +255,7 @@ int main(void)
   HAL_Delay(500);
   if((fresult = f_mount(&fs, "", 0)) != FR_OK){
 	  sprintf(buffer_sd_card, "Card is not detected!!");
-	  SET_BIT(GPIOA->BSRR, GPIO_BSRR_BS_5);
+	  WRITE_REG(GPIOA->BSRR, GPIO_BSRR_BS_5);
 	  GMG12864_third_line_level_1(0, 0);
 	  HAL_Delay(2000);
   }
