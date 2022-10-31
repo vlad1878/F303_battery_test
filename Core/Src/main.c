@@ -145,6 +145,7 @@ bool capacity_timer_flag_1 = 1;
 uint32_t t_capacity = 0;
 uint32_t time_start = 0;
 uint32_t time_stop = 0;
+float time_discharge = 0;
 
 /* USER CODE END PV */
 
@@ -1256,13 +1257,13 @@ void GMG12864_third_line_level_2(uint8_t x, uint8_t y){
 }
 
 void GMG12864_fourth_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "                     ");
+	sprintf(tx_buffer, "Time discha. %.1f min.                     ", time_discharge);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_fifth_line_level_2(uint8_t x, uint8_t y){
-	sprintf(tx_buffer, "                      ");
+	sprintf(tx_buffer, "Capacity %.1f                      ", capacity);
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
@@ -1372,7 +1373,8 @@ void tim7_stop(){
 
 void get_capacity_of_battery(){
 	if(capacity_flag){
-		capacity = 120 * (((float)time_stop - (float)time_start) * (float)0.000000277) / (6 * (float)0.7);
+		time_discharge = ((time_stop - time_start) / (float)1000) / 60;
+		capacity = 120 * ((float)time_discharge * (float)0.000000277) / (6 * (float)0.7);
 		capacity_flag = 0;
 	}
 }
