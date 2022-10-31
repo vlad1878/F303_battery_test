@@ -39,12 +39,13 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define high_charge_on() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BS_0))
-#define low_charge_on() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BS_1))
-#define discharge_on() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BS_2))
-#define high_charge_off() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BR_0))
-#define low_charge_off() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BR_1))
-#define discharge_off() (SET_BIT(GPIOC->BSRR, GPIO_BSRR_BR_2))
+
+#define high_charge_on() (WRITE_REG(GPIOC->BSRR, GPIO_BSRR_BS_0))
+#define low_charge_on() (WRITE_REG(GPIOC->BSRR, GPIO_BSRR_BS_1))
+#define discharge_on() (WRITE_REG(GPIOC->BSRR, GPIO_BSRR_BS_2))
+#define high_charge_off() (WRITE_REG(GPIOC->BSRR, GPIO_BSRR_BR_0))
+#define low_charge_off() (WRITE_REG(GPIOC->BSRR, GPIO_BSRR_BR_1))
+#define discharge_off() (WRITE_REG(GPIOC->BSRR, GPIO_BSRR_BR_2))
 #define read_state_of_high_charge() (READ_BIT(GPIOC->IDR, GPIO_IDR_0))
 #define read_state_of_low_charge() (READ_BIT(GPIOC->IDR, GPIO_IDR_1))
 #define read_state_of_discharge() (READ_BIT(GPIOC->IDR,GPIO_IDR_2))
@@ -137,6 +138,14 @@ uint8_t Current_Mode = 0;
 uint8_t Prev_Mode = 2;
 
 volatile uint16_t tim7_counter = 0;
+
+float capacity = 0.0f;
+bool capacity_flag = 0;
+bool capacity_timer_flag_1 = 1;
+uint32_t t_capacity = 0;
+uint32_t time_start = 0;
+uint32_t time_stop = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -184,6 +193,9 @@ void button_mode_func(void);
 void button_mode_led_delay(void);
 void tim7_start(void);
 void tim7_stop(void);
+void get_capacity_of_battery(void);
+void start_capacity_timer(void);
+void stop_capacity_timer(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -242,6 +254,7 @@ int main(void)
   t_ds3231 = HAL_GetTick();
   t_init_gmg12864 = HAL_GetTick();
   t_button_mode_led = HAL_GetTick();
+  t_capacity = HAL_GetTick();
  // max_ds3231_set_hours(7);
   //max_ds3231_set_minutes(38);
   //max_ds3231_set_seconds(0);
@@ -254,7 +267,7 @@ int main(void)
   HAL_Delay(500);
   if((fresult = f_mount(&fs, "", 0)) != FR_OK){
 	  sprintf(buffer_sd_card, "Card is not detected!!");
-	  SET_BIT(GPIOA->BSRR, GPIO_BSRR_BS_5);
+	  WRITE_REG(GPIOA->BSRR, GPIO_BSRR_BS_5);
 	  GMG12864_third_line_level_1(0, 0);
 	  HAL_Delay(2000);
   }
@@ -275,6 +288,7 @@ int main(void)
 	  sd_card_write();
 	  button_mode_func();
 	  Current_ASC712 = get_current_ASC712();
+	  get_capacity_of_battery();
 	  if(HAL_GetTick() - t_init_gmg12864 > 100000){
 		  t_init_gmg12864 = HAL_GetTick();
 		  GMG12864_Init();
@@ -895,10 +909,14 @@ void automatik_mode(){
 			low_charge_off();
 			high_charge_off();
 			discharge_on();
+			start_capacity_timer();
 			if(v_bus < BATTERY_LOW_LIMIT){
+				stop_capacity_timer();
 				discharge_enable = 0;
 				Prev_Mode = DISCHARGE;
 				tim7_counter = 0;
+				capacity_flag = 1;
+				capacity_timer_flag_1 = 1;
 			}
 		}
 	}
@@ -1350,6 +1368,23 @@ void tim7_start(){
 void tim7_stop(){
 	HAL_TIM_Base_Stop_IT(&htim7);
 	TIM7->CNT = 0;
+}
+
+void get_capacity_of_battery(){
+	if(capacity_flag){
+		capacity = 120 * (((float)time_stop - (float)time_start) * (float)0.000000277) / (6 * (float)0.7);
+		capacity_flag = 0;
+	}
+}
+void start_capacity_timer(){
+	if(capacity_timer_flag_1){
+		time_start = HAL_GetTick();
+		capacity_timer_flag_1 = 0;
+	}
+}
+
+void stop_capacity_timer(){
+	time_stop = HAL_GetTick();
 }
 /* USER CODE END 4 */
 
