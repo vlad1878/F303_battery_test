@@ -145,9 +145,13 @@ bool capacity_timer_flag_1 = 1;
 uint32_t t_capacity = 0;
 uint32_t time_start = 0;
 uint32_t time_stop = 0;
+<<<<<<< HEAD
 uint32_t time_of_discharge_in_min = 0;
 uint32_t discharge_time_min = 0;
 uint32_t discharge_time_max = 0;
+=======
+float time_discharge = 0;
+>>>>>>> 8c8e7ad93b10d43edf1f1f51e2b02297352c7e2b
 
 /* USER CODE END PV */
 
@@ -1259,13 +1263,21 @@ void GMG12864_third_line_level_2(uint8_t x, uint8_t y){
 }
 
 void GMG12864_fourth_line_level_2(uint8_t x, uint8_t y){
+<<<<<<< HEAD
 	sprintf(tx_buffer, "Min. time = %d          ", discharge_time_min);
+=======
+	sprintf(tx_buffer, "Time discha. %.1f min.                     ", time_discharge);
+>>>>>>> 8c8e7ad93b10d43edf1f1f51e2b02297352c7e2b
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
 
 void GMG12864_fifth_line_level_2(uint8_t x, uint8_t y){
+<<<<<<< HEAD
 	sprintf(tx_buffer, "Max. time = &d           ", discharge_time_max);
+=======
+	sprintf(tx_buffer, "Capacity %.1f                      ", capacity);
+>>>>>>> 8c8e7ad93b10d43edf1f1f51e2b02297352c7e2b
 	GMG12864_Decode_UTF8(x, y, 1, inversion_off, tx_buffer);
 	GMG12864_Update();
 }
@@ -1375,6 +1387,7 @@ void tim7_stop(){
 
 void get_capacity_of_battery(){
 	if(capacity_flag){
+<<<<<<< HEAD
 		time_of_discharge_in_min = ((time_stop - time_start) / 1000) / 60;
 		if(time_of_discharge_in_min > discharge_time_max){
 			discharge_time_max = time_of_discharge_in_min;
@@ -1382,6 +1395,10 @@ void get_capacity_of_battery(){
 		else if(time_of_discharge_in_min < discharge_time_min){
 			discharge_time_min = time_of_discharge_in_min;
 		}
+=======
+		time_discharge = ((time_stop - time_start) / (float)1000) / 60;
+		capacity = 120 * ((float)time_discharge * (float)0.000000277) / (6 * (float)0.7);
+>>>>>>> 8c8e7ad93b10d43edf1f1f51e2b02297352c7e2b
 		capacity_flag = 0;
 	}
 }
